@@ -1,6 +1,8 @@
 import subprocess
 import json
 import os
+import platform
+import psutil
 from pathlib import Path
 
 # Load whitelist from config/permissions.json
@@ -9,8 +11,9 @@ with open(PERM_PATH, "r", encoding="utf-8") as f:
     WHITELIST = json.load(f)
 
 def _is_allowed(action: str, target: str) -> bool:
+    if action == "get_system_info":
+        return True # Safe read-only action
     allowed = WHITELIST.get(action, [])
-    # allow exact match or prefix for scripts (e.g., "C:\\Scripts\\")
     for entry in allowed:
         if target.lower().startswith(entry.lower()):
             return True
@@ -18,43 +21,45 @@ def _is_allowed(action: str, target: str) -> bool:
 
 def execute_intent(uid: str, intent: dict):
     """Execute a structured intent.
-
-    Expected intent format:
-    {
-        "action": "open_app" | "run_script",
-        "target": "executable or script path",
-        "args": ["arg1", "arg2", ...]
-    }
-    Returns (success: bool, log_entry: dict).
+    Supported actions: open_app, run_script, get_system_info, list_apps
     """
     action = intent.get("action")
-    target = intent.get("target")
+    target = intent.get("target", "")
     args = intent.get("args", [])
 
-    if not action or not target:
-        return False, {"error": "malformed intent"}
+    if not action:
+        return False, {"error": "no action specified"}
 
     if not _is_allowed(action, target):
         return False, {"error": f"action {action} on {target} not whitelisted"}
 
     try:
         if action == "open_app":
-            # Ensure the executable is found; rely on PATH if just name
             cmd = [target] + args
-            subprocess.run(cmd, check=True, shell=False)
+            subprocess.Popen(cmd, shell=False) # Use Popen so it doesn't block
+            return True, {"message": f"Opening {target}"}
+            
+        elif action == "get_system_info":
+            info = {
+                "os": platform.system(),
+                "version": platform.version(),
+                "cpu_usage": f"{psutil.cpu_percent()}%",
+                "memory_usage": f"{psutil.virtual_memory().percent}%",
+                "disk_usage": f"{psutil.disk_usage('/').percent}%"
+            }
+            return True, info
+
         elif action == "run_script":
-            # For scripts we run via PowerShell (Windows) or bash (Linux)
             script_path = Path(target)
             if not script_path.is_file():
                 raise FileNotFoundError(f"Script {target} not found")
-            # Use PowerShell to execute .ps1 or .bat, otherwise default shell
             if script_path.suffix.lower() in {".ps1", ".bat", ".cmd"}:
-                subprocess.run(["powershell", "-ExecutionPolicy", "Bypass", "-File", str(script_path)], check=True, shell=False)
+                subprocess.run(["powershell", "-ExecutionPolicy", "Bypass", "-File", str(script_path)], check=True)
             else:
-                subprocess.run([str(script_path)] + args, check=True, shell=False)
+                subprocess.run([str(script_path)] + args, check=True)
+            return True, {"message": f"Executed script {target}"}
+            
         else:
             return False, {"error": f"unsupported action {action}"}
     except Exception as e:
         return False, {"exception": str(e)}
-
-    return True, {"action": action, "target": target, "args": args}

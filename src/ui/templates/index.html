@@ -4,183 +4,243 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Jarvis Core Interface</title>
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Roboto:wght@300;400&display=swap" rel="stylesheet">
+    <link rel="icon" href="data:,">
+    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
     <style>
         :root {
-            --primary-blue: #00d2ff;
-            --secondary-blue: #3a7bd5;
-            --bg-dark: #050a14;
-            --glass-bg: rgba(10, 25, 47, 0.7);
-            --glow-color: rgba(0, 210, 255, 0.5);
+            --bg-0: #04070d;
+            --bg-1: #0a1322;
+            --line: #1ed2ff;
+            --line-soft: rgba(30, 210, 255, 0.25);
+            --ok: #42f59e;
+            --warn: #ffe27a;
+            --text: #d4f4ff;
         }
-
-        body, html {
+        * { box-sizing: border-box; }
+        html, body {
             margin: 0;
-            padding: 0;
             height: 100%;
+            color: var(--text);
+            background: radial-gradient(1200px 700px at 70% 20%, #15304c 0%, var(--bg-1) 45%, var(--bg-0) 100%);
+            font-family: 'Rajdhani', sans-serif;
             overflow: hidden;
-            background-color: var(--bg-dark);
-            color: var(--primary-blue);
-            font-family: 'Roboto', sans-serif;
-            display: flex;
-            justify-content: center;
-            align-items: center;
         }
-
-        .container {
-            position: relative;
-            width: 100%;
+        .grid-overlay {
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            background-image:
+                linear-gradient(rgba(30,210,255,.04) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(30,210,255,.04) 1px, transparent 1px);
+            background-size: 24px 24px;
+            mask-image: radial-gradient(circle at 50% 50%, black 35%, transparent 90%);
+        }
+        .app {
             height: 100%;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            background: radial-gradient(circle at center, #0a192f 0%, #050a14 100%);
+            display: grid;
+            grid-template-rows: auto 1fr auto;
+            gap: 16px;
+            padding: 14px;
         }
-
-        /* Arc Reactor Animation */
-        .arc-reactor {
+        .topbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 14px;
+            border: 1px solid var(--line-soft);
+            background: rgba(5, 13, 24, 0.65);
+            backdrop-filter: blur(8px);
+            border-radius: 12px;
+        }
+        .title {
+            letter-spacing: .12em;
+            text-transform: uppercase;
+            font-weight: 700;
+            font-size: 1rem;
+        }
+        .badge {
+            border: 1px solid var(--line-soft);
+            border-radius: 999px;
+            padding: 4px 10px;
+            font-size: .78rem;
+            letter-spacing: .06em;
+            text-transform: uppercase;
+            background: rgba(8, 24, 45, .75);
+        }
+        .main {
+            display: grid;
+            grid-template-columns: 1fr minmax(250px, 340px);
+            gap: 16px;
+            min-height: 0;
+        }
+        .center-panel {
+            border: 1px solid var(--line-soft);
+            border-radius: 16px;
+            background: linear-gradient(180deg, rgba(10,24,45,.7), rgba(5,12,24,.8));
+            display: grid;
+            place-items: center;
+            padding: 20px 12px;
+            min-height: 0;
+        }
+        .reactor {
             position: relative;
-            width: 300px;
-            height: 300px;
+            width: min(58vw, 330px);
+            aspect-ratio: 1;
             border-radius: 50%;
-            background: transparent;
-            box-shadow: 0 0 50px var(--glow-color), inset 0 0 50px var(--glow-color);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            transition: all 0.5s ease;
+            display: grid;
+            place-items: center;
+            box-shadow: 0 0 45px rgba(30,210,255,.35), inset 0 0 30px rgba(30,210,255,.2);
+            border: 1px solid rgba(30,210,255,.3);
+            transition: transform .18s ease, box-shadow .18s ease;
         }
-
-        .arc-reactor.active {
-            box-shadow: 0 0 100px var(--primary-blue), inset 0 0 100px var(--primary-blue);
-            transform: scale(1.1);
+        .reactor.active {
+            box-shadow: 0 0 80px rgba(30,210,255,.65), inset 0 0 60px rgba(30,210,255,.3);
         }
-
         .ring {
             position: absolute;
-            border: 2px solid var(--primary-blue);
             border-radius: 50%;
-            opacity: 0.6;
+            border: 2px solid var(--line);
+            opacity: .65;
         }
-
-        .ring-1 { width: 280px; height: 280px; border-style: dashed; animation: rotate 10s linear infinite; }
-        .ring-2 { width: 240px; height: 240px; border-width: 4px; border-left-color: transparent; animation: rotate 5s linear infinite reverse; }
-        .ring-3 { width: 200px; height: 200px; border-style: double; animation: rotate 8s linear infinite; }
-
+        .r1 { inset: 8%; border-style: dashed; animation: spin 10s linear infinite; }
+        .r2 { inset: 18%; border-left-color: transparent; border-width: 4px; animation: spin 4.8s linear infinite reverse; }
+        .r3 { inset: 28%; border-style: double; animation: spin 7.5s linear infinite; }
         .core {
-            width: 120px;
-            height: 120px;
-            background: radial-gradient(circle, var(--primary-blue) 0%, var(--secondary-blue) 100%);
+            width: 44%;
+            aspect-ratio: 1;
             border-radius: 50%;
-            box-shadow: 0 0 30px var(--primary-blue);
-            z-index: 10;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            font-family: 'Orbitron', sans-serif;
-            font-weight: bold;
-            font-size: 1.2rem;
-            text-shadow: 0 0 10px white;
+            background: radial-gradient(circle at 35% 25%, #6ce3ff, #1c8dd8 65%, #0c4f83);
+            display: grid;
+            place-items: center;
+            font-weight: 700;
+            letter-spacing: .08em;
+            font-size: clamp(.8rem, 2.8vw, 1.25rem);
+            text-shadow: 0 0 14px rgba(255,255,255,.65);
+            box-shadow: 0 0 28px rgba(30,210,255,.7);
         }
-
-        @keyframes rotate {
+        .status-wrap { margin-top: 20px; text-align: center; }
+        .status-text {
+            font-size: clamp(1.2rem, 4vw, 2rem);
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: .12em;
+        }
+        .sub-status {
+            margin-top: 4px;
+            opacity: .82;
+            letter-spacing: .06em;
+            font-size: .95rem;
+        }
+        .right-col {
+            display: grid;
+            grid-template-rows: 1fr 1fr;
+            gap: 16px;
+            min-height: 0;
+        }
+        .card {
+            min-height: 0;
+            border: 1px solid var(--line-soft);
+            border-radius: 12px;
+            background: rgba(4, 11, 22, .75);
+            backdrop-filter: blur(7px);
+            display: flex;
+            flex-direction: column;
+        }
+        .card h3 {
+            margin: 0;
+            padding: 10px 12px;
+            font-size: .85rem;
+            letter-spacing: .12em;
+            text-transform: uppercase;
+            border-bottom: 1px solid var(--line-soft);
+            color: var(--line);
+        }
+        .scroll {
+            min-height: 0;
+            overflow: auto;
+            padding: 10px 12px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: .78rem;
+            line-height: 1.4;
+        }
+        .log-entry {
+            margin-bottom: 8px;
+            padding-left: 8px;
+            border-left: 2px solid rgba(30,210,255,.45);
+        }
+        .log-time { color: var(--line); margin-right: 8px; }
+        .footer {
+            border: 1px solid var(--line-soft);
+            border-radius: 12px;
+            padding: 8px 12px;
+            background: rgba(5, 12, 22, .7);
+            display: flex;
+            justify-content: space-between;
+            font-size: .82rem;
+            letter-spacing: .05em;
+        }
+        .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 999px;
+            display: inline-block;
+            margin-right: 6px;
+            background: var(--warn);
+            box-shadow: 0 0 8px var(--warn);
+        }
+        .dot.ok { background: var(--ok); box-shadow: 0 0 8px var(--ok); }
+        @keyframes spin {
             from { transform: rotate(0deg); }
             to { transform: rotate(360deg); }
         }
-
-        /* Status Text */
-        .status-container {
-            margin-top: 40px;
-            text-align: center;
-            width: 80%;
-            max-width: 600px;
-        }
-
-        .status-label {
-            font-family: 'Orbitron', sans-serif;
-            font-size: 1.5rem;
-            letter-spacing: 2px;
-            margin-bottom: 10px;
-            text-transform: uppercase;
-        }
-
-        .sub-status {
-            font-size: 0.9rem;
-            opacity: 0.7;
-            height: 20px;
-        }
-
-        /* Log Panel */
-        .log-panel {
-            position: absolute;
-            bottom: 20px;
-            left: 20px;
-            right: 20px;
-            height: 150px;
-            background: var(--glass-bg);
-            border: 1px solid var(--primary-blue);
-            border-radius: 10px;
-            padding: 15px;
-            overflow-y: auto;
-            backdrop-filter: blur(10px);
-            font-family: monospace;
-            font-size: 0.85rem;
-            color: #fff;
-        }
-
-        .log-entry { margin-bottom: 5px; border-left: 2px solid var(--primary-blue); padding-left: 10px; }
-        .log-time { color: var(--primary-blue); margin-right: 10px; }
-
-        /* UI Elements */
-        .side-bars {
-            position: absolute;
-            top: 50%;
-            transform: translateY(-50%);
-            height: 60%;
-            width: 4px;
-            background: linear-gradient(to bottom, transparent, var(--primary-blue), transparent);
-        }
-        .left-bar { left: 40px; }
-        .right-bar { right: 40px; }
-
-        /* Scanning effect */
-        .scan-line {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 2px;
-            background: rgba(0, 210, 255, 0.2);
-            animation: scan 4s linear infinite;
-        }
-
-        @keyframes scan {
-            0% { top: 0; }
-            100% { top: 100%; }
+        @media (max-width: 920px) {
+            .main { grid-template-columns: 1fr; }
+            .right-col { grid-template-rows: minmax(180px, 42vh) minmax(180px, 42vh); }
+            .reactor { width: min(72vw, 320px); }
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="scan-line"></div>
-        <div class="side-bars left-bar"></div>
-        <div class="side-bars right-bar"></div>
-
-        <div class="arc-reactor" id="reactor">
-            <div class="ring ring-1"></div>
-            <div class="ring ring-2"></div>
-            <div class="ring ring-3"></div>
-            <div class="core" id="core-text">IDLE</div>
+    <div class="grid-overlay"></div>
+    <div class="app">
+        <div class="topbar">
+            <div class="title">Jarvis Neural Console</div>
+            <div class="badge" id="conn-badge">Link: Connecting</div>
         </div>
 
-        <div class="status-container">
-            <div class="status-label" id="status-text">Standby Mode</div>
-            <div class="sub-status" id="sub-status">Awaiting Double Clap</div>
+        <div class="main">
+            <section class="center-panel">
+                <div>
+                    <div class="reactor" id="reactor">
+                        <div class="ring r1"></div>
+                        <div class="ring r2"></div>
+                        <div class="ring r3"></div>
+                        <div class="core" id="core-text">IDLE</div>
+                    </div>
+                    <div class="status-wrap">
+                        <div class="status-text" id="status-text">Standby Mode</div>
+                        <div class="sub-status" id="sub-status">Awaiting Double Clap</div>
+                    </div>
+                </div>
+            </section>
+
+            <aside class="right-col">
+                <section class="card">
+                    <h3>Mission Log</h3>
+                    <div class="scroll" id="log-panel">
+                        <div class="log-entry"><span class="log-time">[SYSTEM]</span> Jarvis Core initialized.</div>
+                    </div>
+                </section>
+                <section class="card">
+                    <h3>System Terminal</h3>
+                    <div class="scroll" id="terminal-content"></div>
+                </section>
+            </aside>
         </div>
 
-        <div class="log-panel" id="log-panel">
-            <div class="log-entry"><span class="log-time">[SYSTEM]</span> Jarvis Core v1.0 initialized.</div>
+        <div class="footer">
+            <div><span class="dot" id="audio-dot"></span>Audio Pipeline</div>
+            <div id="footer-state">Idle</div>
         </div>
     </div>
 
@@ -191,40 +251,65 @@
         const subStatus = document.getElementById('sub-status');
         const coreText = document.getElementById('core-text');
         const logPanel = document.getElementById('log-panel');
+        const terminal = document.getElementById('terminal-content');
+        const connBadge = document.getElementById('conn-badge');
+        const audioDot = document.getElementById('audio-dot');
+        const footerState = document.getElementById('footer-state');
 
         function addLog(msg) {
             const time = new Date().toLocaleTimeString();
             const entry = document.createElement('div');
             entry.className = 'log-entry';
-            entry.innerHTML = `<span class="log-time">[${time}]</span> ${msg}`;
+            entry.innerHTML = `<span class="log-time">[${time}]</span>${msg}`;
             logPanel.appendChild(entry);
             logPanel.scrollTop = logPanel.scrollHeight;
         }
 
         ws.onmessage = (event) => {
             const data = JSON.parse(event.data);
-            
             if (data.type === 'status') {
                 statusText.innerText = data.text;
                 subStatus.innerText = data.subtext || '';
-                
+                footerState.innerText = data.text || 'Idle';
+
                 if (data.state === 'active') {
                     reactor.classList.add('active');
                     coreText.innerText = 'ACTIVE';
                 } else if (data.state === 'listening') {
                     reactor.classList.add('active');
-                    coreText.innerText = 'LISTENING';
+                    coreText.innerText = 'LISTEN';
                 } else {
                     reactor.classList.remove('active');
                     coreText.innerText = 'IDLE';
                 }
             } else if (data.type === 'log') {
                 addLog(data.text);
+            } else if (data.type === 'terminal') {
+                const line = document.createElement('div');
+                line.style.marginBottom = '4px';
+                line.textContent = `> ${data.text}`;
+                terminal.appendChild(line);
+                terminal.scrollTop = terminal.scrollHeight;
+            } else if (data.type === 'volume') {
+                const scale = 1 + (data.value * 0.45);
+                const glow = Math.min(80, data.value * 700);
+                reactor.style.transform = `scale(${scale})`;
+                reactor.style.boxShadow = `0 0 ${42 + glow}px rgba(30,210,255,.6), inset 0 0 ${28 + glow/2}px rgba(30,210,255,.35)`;
+                if (data.value > 0.02) {
+                    audioDot.classList.add('ok');
+                }
             }
         };
 
-        ws.onopen = () => addLog('Connected to Jarvis Core.');
-        ws.onclose = () => addLog('Disconnected from Jarvis Core.');
+        ws.onopen = () => {
+            connBadge.textContent = 'Link: Connected';
+            addLog('Connected to Jarvis Core.');
+        };
+        ws.onclose = () => {
+            connBadge.textContent = 'Link: Disconnected';
+            addLog('Disconnected from Jarvis Core.');
+            audioDot.classList.remove('ok');
+        };
     </script>
 </body>
 </html>

@@ -1,6 +1,7 @@
 import pyaudio
 import numpy as np
 from collections import deque
+import time
 
 class AudioCapture:
     """Continuously reads audio from the default microphone.
@@ -49,3 +50,50 @@ class AudioCapture:
             self.stream.stop_stream()
             self.stream.close()
         self.p.terminate()
+
+    def read_seconds(self, seconds: float) -> np.ndarray:
+        """Read and return approximately `seconds` of audio samples."""
+        frames = max(1, int((self.rate * seconds) / self.chunk))
+        chunks = []
+        for _ in range(frames):
+            chunks.append(self.read())
+        return np.concatenate(chunks).astype(np.float32, copy=False)
+
+    def capture_utterance(
+        self,
+        max_seconds: float = 6.0,
+        silence_seconds: float = 1.0,
+        energy_threshold: float = 0.015
+    ) -> np.ndarray:
+        """Capture a short phrase after activation.
+        Starts collecting immediately and stops early after sustained silence.
+        """
+        total_frames = max(1, int((self.rate * max_seconds) / self.chunk))
+        silence_frames_needed = max(1, int((self.rate * silence_seconds) / self.chunk))
+        chunks = []
+        silence_run = 0
+        heard_voice = False
+
+        start = time.time()
+        for _ in range(total_frames):
+            chunk = self.read()
+            chunks.append(chunk)
+
+            rms = float(np.sqrt(np.mean(np.square(chunk)))) if len(chunk) else 0.0
+            if rms >= energy_threshold:
+                heard_voice = True
+                silence_run = 0
+            else:
+                silence_run += 1
+
+            # End after user stopped speaking.
+            if heard_voice and silence_run >= silence_frames_needed:
+                break
+
+            # Safety brake for timing drift.
+            if (time.time() - start) >= (max_seconds + 0.25):
+                break
+
+        if not chunks:
+            return np.array([], dtype=np.float32)
+        return np.concatenate(chunks).astype(np.float32, copy=False)

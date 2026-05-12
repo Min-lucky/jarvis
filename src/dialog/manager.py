@@ -1,6 +1,6 @@
 import json
 import datetime
-from ..mcp.protocol import parse_response
+from ..persistence.logger import log_interaction
 from ..action.executor import execute_intent
 from ..persistence.permissions import is_granted, grant
 
@@ -10,28 +10,47 @@ class DialogManager:
         self.history = []  # list of dict(role, content)
 
     async def handle_user_utterance(self, text: str, llm_client):
-        """Send user text to LLM, parse intent, check permissions, and execute.
-        llm_client must expose an async method `query(envelope: str) -> str` returning MCP JSON.
-        """
+        """Send user text to LLM, parse intent, execute, and log."""
         self.history.append({"role": "user", "content": text})
-        # Build MCP envelope via llm client (or external helper)
-        envelope = llm_client.make_envelope(self.history, self.user_id)
-        response_envelope = await llm_client.query(envelope)
-        intent = json.loads(response_envelope).get("intent")
-        if not intent:
-            # fallback: treat whole response as plain answer
-            answer = parse_response(response_envelope)
-            self.history.append({"role": "assistant", "content": answer})
-            return answer
-        # Permission check
-        action = intent.get("action")
-        target = intent.get("target")
-        if not is_granted(self.user_id, action, target):
-            # ask for permission (simplified: assume user says yes)
-            # In real implementation you would invoke TTS + STT to get yes/no
-            # Here we auto‑grant for demo purposes
-            grant(self.user_id, action, target, datetime.datetime.utcnow().isoformat())
-        success, log_entry = execute_intent(self.user_id, intent)
-        reply = f"Done – {action.replace('_', ' ')} {target}." if success else f"Failed to {action} {target}."
-        self.history.append({"role": "assistant", "content": reply})
-        return reply
+        
+        # Query LLM (using the updated client)
+        response_json = await llm_client.query(self.history)
+        
+        try:
+            data = json.loads(response_json)
+        except:
+            # Fallback for plain text response
+            data = {"content": response_json, "intent": None}
+            
+        content = data.get("content", "I'm not sure how to respond to that.")
+        intent = data.get("intent")
+        
+        # 1. First, Jarvis speaks his natural language response
+        final_reply = content
+        
+        # 2. Execute intent if present
+        tool_output = None
+        if intent:
+            action = intent.get("action")
+            target = intent.get("target", "")
+            
+            # Simple permission check (Auto-grant for now as per project goal)
+            if not is_granted(self.user_id, action, target):
+                grant(self.user_id, action, target, datetime.datetime.now().isoformat())
+            
+            success, tool_output = execute_intent(self.user_id, intent)
+            
+            if success:
+                if action == "get_system_info":
+                    final_reply = f"{content} I've checked the systems for you: {json.dumps(tool_output)}"
+                else:
+                    final_reply = f"{content} I've successfully initiated the {action} for {target}."
+            else:
+                final_reply = f"{content} However, I encountered an issue: {tool_output.get('error', 'unknown error')}"
+
+        self.history.append({"role": "assistant", "content": final_reply})
+        
+        # 3. Log everything to the server-side database
+        log_interaction(self.user_id, text, final_reply, intent, tool_output)
+        
+        return final_reply

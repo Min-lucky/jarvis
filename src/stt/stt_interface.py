@@ -11,7 +11,7 @@ class STTInterface:
         self.backend = backend
         self.recognizer = sr.Recognizer()
 
-    async def transcribe(self, audio_data: np.ndarray = None) -> str:
+    async def transcribe(self, audio_data: np.ndarray = None, sample_rate: int = 44100) -> str:
         """
         Transcribes audio data to text.
         """
@@ -21,10 +21,29 @@ class STTInterface:
             text = await loop.run_in_executor(None, input, "You: ")
             return text.strip()
         else:
-            # Real Voice Recognition using speech_recognition
-            print("\n[Jarvis] Listening to your voice...")
             loop = asyncio.get_event_loop()
+            if audio_data is not None and len(audio_data) > 0:
+                return await loop.run_in_executor(None, self._transcribe_from_samples, audio_data, sample_rate)
+            # Fallback to direct microphone capture when no samples are provided.
+            print("\n[Jarvis] Listening to your voice...")
             return await loop.run_in_executor(None, self._listen_and_transcribe)
+
+    def _transcribe_from_samples(self, samples: np.ndarray, sample_rate: int = 44100):
+        """Transcribe float32 samples in range [-1, 1] using recognizer backend."""
+        try:
+            clipped = np.clip(samples, -1.0, 1.0)
+            pcm16 = (clipped * 32767.0).astype(np.int16)
+            audio = sr.AudioData(pcm16.tobytes(), sample_rate=sample_rate, sample_width=2)
+            print("[Jarvis] Processing voice...")
+            text = self.recognizer.recognize_google(audio)
+            print(f"You said: {text}")
+            return text
+        except sr.UnknownValueError:
+            print("[Jarvis] Sorry, I didn't catch that.")
+            return ""
+        except Exception as e:
+            print(f"[Jarvis] Voice Error: {str(e)}")
+            return ""
 
     def _listen_and_transcribe(self):
         with sr.Microphone() as source:

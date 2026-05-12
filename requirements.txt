@@ -14,6 +14,7 @@ aiohttp==3.13.5
 pyyaml==6.0.3
 SpeechRecognition==3.16.1
 jinja2==3.1.6
+psutil==5.9.8
 # whispercpp and TTS are optional and may require manual setup on some systems
 # whispercpp==0.2.5
 # TTS==0.22.0

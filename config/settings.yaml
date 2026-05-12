@@ -3,17 +3,17 @@
 # Audio settings
 sample_rate: 44100          # Hz
 chunk_size: 1024           # frames per read
-clap_threshold: 0.3        # lowered for better sensitivity
-clap_max_interval: 1.5     # slightly more time for double clap
+voice_wake_threshold: 0.001 # start listening when mic level crosses this threshold
 
 # Permission settings
 permissions_file: "config/permissions.json"
 
 # MCP settings
-mcp_endpoint: "http://127.0.0.1:5000/v1/chat/completions"  # local LLM server endpoint
+mcp_endpoint: "http://127.0.0.1:11434/v1/chat/completions"  # Ollama OpenAI-compatible endpoint
+llm_model: "minicpm-v"                                       # ollama run minicpm-v
 use_gpu: true
 
 # STT/TTS selection (choose one)
 # STT/TTS selection
-stt_backend: "placeholder"   # options: placeholder (type in console), real (voice recognition)
+stt_backend: "real"          # options: placeholder (type in console), real (voice recognition)
 tts_backend: "coqui"         # options: coqui, edge_tts (Currently uses pyttsx3 by default)
