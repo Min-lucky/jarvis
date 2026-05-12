@@ -1,0 +1,4 @@
+{
+  "open_app": ["chrome.exe", "notepad.exe", "explorer.exe", "excel.exe", "word.exe"],
+  "run_script": ["C:\\Scripts\\"]
+}

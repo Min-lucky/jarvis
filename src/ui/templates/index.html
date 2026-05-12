@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jarvis Core Interface</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Roboto:wght@300;400&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-blue: #00d2ff;
+            --secondary-blue: #3a7bd5;
+            --bg-dark: #050a14;
+            --glass-bg: rgba(10, 25, 47, 0.7);
+            --glow-color: rgba(0, 210, 255, 0.5);
+        }
+
+        body, html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            overflow: hidden;
+            background-color: var(--bg-dark);
+            color: var(--primary-blue);
+            font-family: 'Roboto', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background: radial-gradient(circle at center, #0a192f 0%, #050a14 100%);
+        }
+
+        /* Arc Reactor Animation */
+        .arc-reactor {
+            position: relative;
+            width: 300px;
+            height: 300px;
+            border-radius: 50%;
+            background: transparent;
+            box-shadow: 0 0 50px var(--glow-color), inset 0 0 50px var(--glow-color);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: all 0.5s ease;
+        }
+
+        .arc-reactor.active {
+            box-shadow: 0 0 100px var(--primary-blue), inset 0 0 100px var(--primary-blue);
+            transform: scale(1.1);
+        }
+
+        .ring {
+            position: absolute;
+            border: 2px solid var(--primary-blue);
+            border-radius: 50%;
+            opacity: 0.6;
+        }
+
+        .ring-1 { width: 280px; height: 280px; border-style: dashed; animation: rotate 10s linear infinite; }
+        .ring-2 { width: 240px; height: 240px; border-width: 4px; border-left-color: transparent; animation: rotate 5s linear infinite reverse; }
+        .ring-3 { width: 200px; height: 200px; border-style: double; animation: rotate 8s linear infinite; }
+
+        .core {
+            width: 120px;
+            height: 120px;
+            background: radial-gradient(circle, var(--primary-blue) 0%, var(--secondary-blue) 100%);
+            border-radius: 50%;
+            box-shadow: 0 0 30px var(--primary-blue);
+            z-index: 10;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: 'Orbitron', sans-serif;
+            font-weight: bold;
+            font-size: 1.2rem;
+            text-shadow: 0 0 10px white;
+        }
+
+        @keyframes rotate {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        /* Status Text */
+        .status-container {
+            margin-top: 40px;
+            text-align: center;
+            width: 80%;
+            max-width: 600px;
+        }
+
+        .status-label {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.5rem;
+            letter-spacing: 2px;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+        }
+
+        .sub-status {
+            font-size: 0.9rem;
+            opacity: 0.7;
+            height: 20px;
+        }
+
+        /* Log Panel */
+        .log-panel {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            right: 20px;
+            height: 150px;
+            background: var(--glass-bg);
+            border: 1px solid var(--primary-blue);
+            border-radius: 10px;
+            padding: 15px;
+            overflow-y: auto;
+            backdrop-filter: blur(10px);
+            font-family: monospace;
+            font-size: 0.85rem;
+            color: #fff;
+        }
+
+        .log-entry { margin-bottom: 5px; border-left: 2px solid var(--primary-blue); padding-left: 10px; }
+        .log-time { color: var(--primary-blue); margin-right: 10px; }
+
+        /* UI Elements */
+        .side-bars {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            height: 60%;
+            width: 4px;
+            background: linear-gradient(to bottom, transparent, var(--primary-blue), transparent);
+        }
+        .left-bar { left: 40px; }
+        .right-bar { right: 40px; }
+
+        /* Scanning effect */
+        .scan-line {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background: rgba(0, 210, 255, 0.2);
+            animation: scan 4s linear infinite;
+        }
+
+        @keyframes scan {
+            0% { top: 0; }
+            100% { top: 100%; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="scan-line"></div>
+        <div class="side-bars left-bar"></div>
+        <div class="side-bars right-bar"></div>
+
+        <div class="arc-reactor" id="reactor">
+            <div class="ring ring-1"></div>
+            <div class="ring ring-2"></div>
+            <div class="ring ring-3"></div>
+            <div class="core" id="core-text">IDLE</div>
+        </div>
+
+        <div class="status-container">
+            <div class="status-label" id="status-text">Standby Mode</div>
+            <div class="sub-status" id="sub-status">Awaiting Double Clap</div>
+        </div>
+
+        <div class="log-panel" id="log-panel">
+            <div class="log-entry"><span class="log-time">[SYSTEM]</span> Jarvis Core v1.0 initialized.</div>
+        </div>
+    </div>
+
+    <script>
+        const ws = new WebSocket(`ws://${window.location.host}/ws`);
+        const reactor = document.getElementById('reactor');
+        const statusText = document.getElementById('status-text');
+        const subStatus = document.getElementById('sub-status');
+        const coreText = document.getElementById('core-text');
+        const logPanel = document.getElementById('log-panel');
+
+        function addLog(msg) {
+            const time = new Date().toLocaleTimeString();
+            const entry = document.createElement('div');
+            entry.className = 'log-entry';
+            entry.innerHTML = `<span class="log-time">[${time}]</span> ${msg}`;
+            logPanel.appendChild(entry);
+            logPanel.scrollTop = logPanel.scrollHeight;
+        }
+
+        ws.onmessage = (event) => {
+            const data = JSON.parse(event.data);
+            
+            if (data.type === 'status') {
+                statusText.innerText = data.text;
+                subStatus.innerText = data.subtext || '';
+                
+                if (data.state === 'active') {
+                    reactor.classList.add('active');
+                    coreText.innerText = 'ACTIVE';
+                } else if (data.state === 'listening') {
+                    reactor.classList.add('active');
+                    coreText.innerText = 'LISTENING';
+                } else {
+                    reactor.classList.remove('active');
+                    coreText.innerText = 'IDLE';
+                }
+            } else if (data.type === 'log') {
+                addLog(data.text);
+            }
+        };
+
+        ws.onopen = () => addLog('Connected to Jarvis Core.');
+        ws.onclose = () => addLog('Disconnected from Jarvis Core.');
+    </script>
+</body>
+</html>

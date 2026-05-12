@@ -1,0 +1,19 @@
+pyaudio==0.2.14
+numpy==2.4.4
+sounddevice==0.5.5
+scipy==1.17.1
+vosk==0.3.45
+pyttsx3==2.99
+pywin32==311
+pywinauto==0.6.9
+fastapi==0.136.1
+uvicorn[standard]==0.46.0
+sqlalchemy==2.0.49
+requests==2.34.0
+aiohttp==3.13.5
+pyyaml==6.0.3
+SpeechRecognition==3.16.1
+jinja2==3.1.6
+# whispercpp and TTS are optional and may require manual setup on some systems
+# whispercpp==0.2.5
+# TTS==0.22.0
